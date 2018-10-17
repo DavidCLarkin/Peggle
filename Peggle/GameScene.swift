@@ -3,6 +3,7 @@ import GameplayKit
 
 class GameScene: SKScene, SKPhysicsContactDelegate
 {
+    let ballArray = ["ballBlue", "ballCyan", "ballGreen", "ballGrey", "ballPurple", "ballRed", "ballYellow"]
     
     var scoreLabel: SKLabelNode!
     var score = 0
@@ -76,6 +77,14 @@ class GameScene: SKScene, SKPhysicsContactDelegate
             {
                 if editingMode
                 {
+                    for object in objects
+                    {
+                        if object.name == "box"
+                        {
+                            object.removeFromParent()
+                            return
+                        }
+                    }
                     let size = CGSize(width: GKRandomDistribution(lowestValue: 16, highestValue: 128).nextInt(), height: 16)
                     let box = SKSpriteNode(color: RandomColor(), size: size)
                     box.zRotation = RandomCGFloat(min: 0, max: 3)
@@ -83,15 +92,18 @@ class GameScene: SKScene, SKPhysicsContactDelegate
                     
                     box.physicsBody = SKPhysicsBody(rectangleOf: box.size)
                     box.physicsBody?.isDynamic = false
+                    box.name = "box"
                     addChild(box)
                 }
                 else
                 {
-                    let ball = SKSpriteNode(imageNamed: "ballRed")
+                    let randNum = Int(arc4random_uniform(UInt32(ballArray.count)))
+                    let ball = SKSpriteNode(imageNamed: ballArray[randNum])
                     ball.physicsBody = SKPhysicsBody(circleOfRadius: ball.size.width / 2.0)
                     ball.physicsBody!.contactTestBitMask = ball.physicsBody!.collisionBitMask
                     ball.physicsBody?.restitution = 0.4
-                    ball.position = location //set box position at mouse click
+                    ball.position.x = location.x //set box position at mouse click
+                    ball.position.y = (self.view?.bounds.height)!
                     ball.name = "ball"
                     addChild(ball)
                 }
