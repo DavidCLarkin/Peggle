@@ -197,7 +197,13 @@ class GameScene: SKScene, SKPhysicsContactDelegate
             destroy(ball: ball)
             score -= 1
         }
+        else if object.name == "box"
+        {
+            destroy(box: object)
+            // maybe add scoring here
+        }
     }
+    
     
     func destroy(ball: SKNode)
     {
@@ -208,5 +214,10 @@ class GameScene: SKScene, SKPhysicsContactDelegate
         }
         ball.removeFromParent()
         currentBalls -= 1
+    }
+    
+    func destroy(box: SKNode)
+    {
+        box.removeFromParent()
     }
 }
