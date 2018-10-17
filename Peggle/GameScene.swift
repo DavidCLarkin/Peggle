@@ -5,6 +5,19 @@ class GameScene: SKScene, SKPhysicsContactDelegate
 {
     let ballArray = ["ballBlue", "ballCyan", "ballGreen", "ballGrey", "ballPurple", "ballRed", "ballYellow"]
     
+    let MAX_BALLS : Int = 5
+    var currentBalls = 0
+    {
+        didSet
+        {
+            print(currentBalls)
+            if currentBalls >= MAX_BALLS
+            {
+                currentBalls = MAX_BALLS
+            }
+        }
+    }
+    
     var scoreLabel: SKLabelNode!
     var score = 0
     {
@@ -29,6 +42,7 @@ class GameScene: SKScene, SKPhysicsContactDelegate
             }
         }
     }
+    
     override func didMove(to view: SKView)
     {
         let background = SKSpriteNode(imageNamed: "background.jpg")
@@ -97,15 +111,19 @@ class GameScene: SKScene, SKPhysicsContactDelegate
                 }
                 else
                 {
-                    let randNum = Int(arc4random_uniform(UInt32(ballArray.count)))
-                    let ball = SKSpriteNode(imageNamed: ballArray[randNum])
-                    ball.physicsBody = SKPhysicsBody(circleOfRadius: ball.size.width / 2.0)
-                    ball.physicsBody!.contactTestBitMask = ball.physicsBody!.collisionBitMask
-                    ball.physicsBody?.restitution = 0.4
-                    ball.position.x = location.x //set box position at mouse click
-                    ball.position.y = (self.view?.bounds.height)!
-                    ball.name = "ball"
-                    addChild(ball)
+                    if(currentBalls < MAX_BALLS)
+                    {
+                        let randNum = Int(arc4random_uniform(UInt32(ballArray.count)))
+                        let ball = SKSpriteNode(imageNamed: ballArray[randNum])
+                        ball.physicsBody = SKPhysicsBody(circleOfRadius: ball.size.width / 2.0)
+                        ball.physicsBody!.contactTestBitMask = ball.physicsBody!.collisionBitMask
+                        ball.physicsBody?.restitution = 0.4
+                        ball.position.x = location.x //set box position at mouse click
+                        ball.position.y = (self.view?.bounds.height)!
+                        ball.name = "ball"
+                        addChild(ball)
+                        currentBalls += 1
+                    }
                 }
             }
         }
@@ -189,5 +207,6 @@ class GameScene: SKScene, SKPhysicsContactDelegate
             addChild(fireParticles)
         }
         ball.removeFromParent()
+        currentBalls -= 1
     }
 }
