@@ -45,6 +45,8 @@ class GameScene: SKScene, SKPhysicsContactDelegate
         }
     }
     
+    var restartLabel: SKLabelNode!
+    
     var editLabel: SKLabelNode!
     var editingMode: Bool = false
     {
@@ -99,7 +101,12 @@ class GameScene: SKScene, SKPhysicsContactDelegate
         ballLabel.position = CGPoint(x: 300, y: 700)
         addChild(ballLabel)
         
-        makeBoxes(numOfBoxes: 20)
+        restartLabel = SKLabelNode(fontNamed: "Chalkduster")
+        restartLabel.text = "Restart"
+        restartLabel.position = CGPoint(x: 600, y: 700)
+        addChild(restartLabel)
+        
+        makeBoxes(numOfBoxes: 20) // make boxes
         
     }
     
@@ -112,6 +119,10 @@ class GameScene: SKScene, SKPhysicsContactDelegate
             if objects.contains(editLabel)
             {
                 editingMode = !editingMode
+            }
+            if objects.contains(restartLabel)
+            {
+                resetGame()
             }
             else
             {
@@ -138,7 +149,7 @@ class GameScene: SKScene, SKPhysicsContactDelegate
                 }
                 else
                 {
-                    if ballsInPlay.count <= 5 && currentBalls > 0
+                    if currentBalls > 0
                     {
                         let ball = Ball()
                         ball.physicsBody = SKPhysicsBody(circleOfRadius: ball.size.width / 2.0)
@@ -148,7 +159,7 @@ class GameScene: SKScene, SKPhysicsContactDelegate
                         ball.position.y = (self.view?.bounds.height)!
                         ball.name = "ball"
                         addChild(ball)
-                        ballsInPlay.append(ball)
+                        //ballsInPlay.append(ball)
                         currentBalls -= 1
                     }
                     else if currentBalls <= 0
@@ -195,30 +206,38 @@ class GameScene: SKScene, SKPhysicsContactDelegate
             let size = CGSize(width: GKRandomDistribution(lowestValue: 32, highestValue: 128).nextInt(), height: 16)
             let box = SKSpriteNode(color: RandomColor(), size: size)
             box.zRotation = RandomCGFloat(min: 0, max: 3)
-            box.position = CGPoint(x: GKRandomSource.sharedRandom().nextInt(upperBound: Int(height!)), y: GKRandomSource.sharedRandom().nextInt(upperBound: Int(width!)))
-            if box.position.x < 100
-            {
-                box.position.x = 100
-            }
-            else if box.position.x > 924
-            {
-                box.position.x = 924
-            }
-            if box.position.y > 620
-            {
-                box.position.y = 620
-            }
-            else if box.position.y < 150
-            {
-                box.position.y = 150
-            }
+            box.position = CGPoint(x: GKRandomDistribution(lowestValue: 100, highestValue: Int(width! - CGFloat(100))).nextInt(), y: GKRandomDistribution(lowestValue: 150, highestValue: Int(height! - CGFloat(200))).nextInt())
             
             box.physicsBody = SKPhysicsBody(rectangleOf: box.size)
             box.physicsBody?.isDynamic = false
             box.name = "box"
             boxes.append(box)
             addChild(box)
+            
+            //choose random boxes to spin or not to spin
+            let rotate = GKRandomDistribution(lowestValue: 0, highestValue: 1).nextInt()
+            if rotate == 1
+            {
+                let spin = SKAction.rotate(byAngle: .pi / 2, duration: 10)
+                let spinForever = SKAction.repeatForever(spin)
+                box.run(spinForever)
+            }
             num -= 1
+        }
+        
+        //move boxes if really close, still overlaps sometimes
+        for i in 0...boxes.count-1
+        {
+            for j in 1...boxes.count-1
+            {
+                if CGPointDistance(from: boxes[i].position, to: boxes[j].position) <= 50
+                {
+                    boxes[i].position.x += 20
+                    boxes[i].position.y -= 20
+                    boxes[j].position.x -= 20
+                    boxes[j].position.y += 20
+                }
+            }
         }
     }
     
@@ -260,6 +279,7 @@ class GameScene: SKScene, SKPhysicsContactDelegate
         {
             destroy(ball: ball)
             score += 1
+            currentBalls += 1
         }
         else if object.name == "bad"
         {
@@ -279,8 +299,6 @@ class GameScene: SKScene, SKPhysicsContactDelegate
             }
             
             destroy(box: object)
-            
-            // maybe add scoring here
         }
         else if object.name == "bouncer"
         {
@@ -294,7 +312,6 @@ class GameScene: SKScene, SKPhysicsContactDelegate
             {
                 ball.setBouncersHit(increaseBy: 1)
             }
-            print(ball.bouncersHit)
         }
     }
     
@@ -317,9 +334,30 @@ class GameScene: SKScene, SKPhysicsContactDelegate
     func resetGame()
     {
         score = 0
+        for box in boxes
+        {
+            box.removeFromParent()
+        }
         boxes.removeAll()
+        
+        for ball in ballsInPlay
+        {
+            ball.removeFromParent()
+        }
         ballsInPlay.removeAll()
         currentBalls = 5
+        makeBoxes(numOfBoxes: 20)
         gameOver = false
     }
+    
+    func CGPointDistanceSquared(from: CGPoint, to: CGPoint) -> CGFloat
+    {
+        return (from.x - to.x) * (from.x - to.x) + (from.y - to.y) * (from.y - to.y)
+    }
+    
+    func CGPointDistance(from: CGPoint, to: CGPoint) -> CGFloat
+    {
+        return sqrt(CGPointDistanceSquared(from: from, to: to))
+    }
+    
 }
