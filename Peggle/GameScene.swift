@@ -3,18 +3,32 @@ import GameplayKit
 
 class GameScene: SKScene, SKPhysicsContactDelegate
 {
-    let ballArray = ["ballBlue", "ballCyan", "ballGreen", "ballGrey", "ballPurple", "ballRed", "ballYellow"]
-    
-    let MAX_BALLS : Int = 5
-    var currentBalls = 0
+    var boxes = [SKSpriteNode]()
+    var ballsInPlay = [Ball]()
+    let MAX_BALLS : Int = 10
+    var gameOver = false
     {
         didSet
         {
-            print(currentBalls)
+            if gameOver
+            {
+                resetGame()
+                print("Game Over")
+            }
+        }
+    }
+    
+    var ballLabel: SKLabelNode!
+    var currentBalls = 5
+    {
+        didSet
+        {
+            //print(currentBalls)
             if currentBalls >= MAX_BALLS
             {
                 currentBalls = MAX_BALLS
             }
+            ballLabel.text = "Balls Left: \(currentBalls)"
         }
     }
     
@@ -23,6 +37,10 @@ class GameScene: SKScene, SKPhysicsContactDelegate
     {
         didSet
         {
+            if score <= 0
+            {
+                score = 0
+            }
             scoreLabel.text = "score: \(score)"
         }
     }
@@ -42,6 +60,7 @@ class GameScene: SKScene, SKPhysicsContactDelegate
             }
         }
     }
+
     
     override func didMove(to view: SKView)
     {
@@ -75,6 +94,13 @@ class GameScene: SKScene, SKPhysicsContactDelegate
         editLabel.position = CGPoint(x: 80, y: 700)
         addChild(editLabel)
         
+        ballLabel = SKLabelNode(fontNamed: "Chalkduster")
+        ballLabel.text = "Balls Left: \(currentBalls)"
+        ballLabel.position = CGPoint(x: 300, y: 700)
+        addChild(ballLabel)
+        
+        makeBoxes(numOfBoxes: 20)
+        
     }
     
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?)
@@ -107,14 +133,14 @@ class GameScene: SKScene, SKPhysicsContactDelegate
                     box.physicsBody = SKPhysicsBody(rectangleOf: box.size)
                     box.physicsBody?.isDynamic = false
                     box.name = "box"
+                    boxes.append(box)
                     addChild(box)
                 }
                 else
                 {
-                    if(currentBalls < MAX_BALLS)
+                    if ballsInPlay.count <= 5 && currentBalls > 0
                     {
-                        let randNum = Int(arc4random_uniform(UInt32(ballArray.count)))
-                        let ball = SKSpriteNode(imageNamed: ballArray[randNum])
+                        let ball = Ball()
                         ball.physicsBody = SKPhysicsBody(circleOfRadius: ball.size.width / 2.0)
                         ball.physicsBody!.contactTestBitMask = ball.physicsBody!.collisionBitMask
                         ball.physicsBody?.restitution = 0.4
@@ -122,7 +148,12 @@ class GameScene: SKScene, SKPhysicsContactDelegate
                         ball.position.y = (self.view?.bounds.height)!
                         ball.name = "ball"
                         addChild(ball)
-                        currentBalls += 1
+                        ballsInPlay.append(ball)
+                        currentBalls -= 1
+                    }
+                    else if currentBalls <= 0
+                    {
+                        gameOver = true
                     }
                 }
             }
@@ -135,6 +166,7 @@ class GameScene: SKScene, SKPhysicsContactDelegate
         bouncer.position = position
         bouncer.physicsBody = SKPhysicsBody(circleOfRadius: bouncer.size.width / 2.0)
         bouncer.physicsBody?.isDynamic = false
+        bouncer.name = "bouncer"
         addChild(bouncer)
     }
     
@@ -145,11 +177,48 @@ class GameScene: SKScene, SKPhysicsContactDelegate
         
         if nodeA.name == "ball"
         {
-            collisionBetween(ball: nodeA, object: nodeB)
+            collisionBetween(ball: nodeA as! Ball, object: nodeB)
         }
         else if nodeB.name == "ball"
         {
-            collisionBetween(ball: nodeB, object: nodeA)
+            collisionBetween(ball: nodeB as! Ball, object: nodeA)
+        }
+    }
+    
+    func makeBoxes(numOfBoxes: Int)
+    {
+        var num = numOfBoxes
+        while num > 0
+        {
+            let height = self.view?.bounds.height
+            let width = self.view?.bounds.width
+            let size = CGSize(width: GKRandomDistribution(lowestValue: 32, highestValue: 128).nextInt(), height: 16)
+            let box = SKSpriteNode(color: RandomColor(), size: size)
+            box.zRotation = RandomCGFloat(min: 0, max: 3)
+            box.position = CGPoint(x: GKRandomSource.sharedRandom().nextInt(upperBound: Int(height!)), y: GKRandomSource.sharedRandom().nextInt(upperBound: Int(width!)))
+            if box.position.x < 100
+            {
+                box.position.x = 100
+            }
+            else if box.position.x > 924
+            {
+                box.position.x = 924
+            }
+            if box.position.y > 620
+            {
+                box.position.y = 620
+            }
+            else if box.position.y < 150
+            {
+                box.position.y = 150
+            }
+            
+            box.physicsBody = SKPhysicsBody(rectangleOf: box.size)
+            box.physicsBody?.isDynamic = false
+            box.name = "box"
+            boxes.append(box)
+            addChild(box)
+            num -= 1
         }
     }
     
@@ -185,7 +254,7 @@ class GameScene: SKScene, SKPhysicsContactDelegate
         slotGlow.run(spinForever)
     }
     
-    func collisionBetween(ball: SKNode, object: SKNode)
+    func collisionBetween(ball: Ball, object: SKNode)
     {
         if object.name == "good"
         {
@@ -195,15 +264,39 @@ class GameScene: SKScene, SKPhysicsContactDelegate
         else if object.name == "bad"
         {
             destroy(ball: ball)
-            score -= 1
+            //score -= 1
         }
         else if object.name == "box"
         {
+            if ball.boxesHit >= 2
+            {
+                score += 1
+                ball.boxesHit = 0
+            }
+            else
+            {
+                ball.boxesHit += 1
+            }
+            
             destroy(box: object)
+            
             // maybe add scoring here
         }
+        else if object.name == "bouncer"
+        {
+            if ball.bouncersHit == 1
+            {
+                let action = SKAction.move(to: CGPoint(x: GKRandomSource.sharedRandom().nextInt(upperBound: 1024), y: 750), duration: 0)
+                ball.run(action)
+                ball.bouncersHit = 0
+            }
+            else
+            {
+                ball.setBouncersHit(increaseBy: 1)
+            }
+            print(ball.bouncersHit)
+        }
     }
-    
     
     func destroy(ball: SKNode)
     {
@@ -213,11 +306,20 @@ class GameScene: SKScene, SKPhysicsContactDelegate
             addChild(fireParticles)
         }
         ball.removeFromParent()
-        currentBalls -= 1
+        //currentBalls -= 1
     }
     
     func destroy(box: SKNode)
     {
         box.removeFromParent()
+    }
+    
+    func resetGame()
+    {
+        score = 0
+        boxes.removeAll()
+        ballsInPlay.removeAll()
+        currentBalls = 5
+        gameOver = false
     }
 }
